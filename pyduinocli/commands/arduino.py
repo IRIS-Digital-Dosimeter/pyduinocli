@@ -17,6 +17,7 @@ from pyduinocli.commands.outdated import OutdatedCommand
 from pyduinocli.commands.update import UpdateCommand
 from pyduinocli.commands.upgrade import UpgradeCommand
 from pyduinocli.constants import flags
+import os
 
 
 class ArduinoCliCommand(CommandBase):
@@ -28,7 +29,7 @@ class ArduinoCliCommand(CommandBase):
 
     __FORMAT_JSON = 'json'
 
-    def __init__(self, cli_path="arduino-cli", config_file=None, additional_urls=None, log_file=None, log_format=None,
+    def __init__(self, cli_path='arduino-cli', config_file=None, additional_urls=None, log_file=None, log_format=None,
                  log_level=None, no_color=None):
         """
         :param cli_path: The :code:`arduino-cli` command name if available in :code:`$PATH`. Can also be a direct path to the executable
@@ -46,6 +47,22 @@ class ArduinoCliCommand(CommandBase):
         :param no_color: Disable colored output
         :type no_color: bool or NoneType
         """
+        
+        
+        
+        # if there is no CLI tool at `cli_path`, download the official tool
+        library_dir = os.path.dirname(os.path.abspath(__file__))
+        install_path = os.path.abspath(os.path.join(library_dir, '..', '..', 'arduino-cli'))
+        loc_cli_exists = (os.path.isfile(os.path.join(install_path, 'arduino-cli.exe'))) or (os.path.isfile(os.path.join(install_path, 'arduino-cli')))
+        print(f"cli exists1: {loc_cli_exists}")
+        print(f"cli exists2: {os.path.isfile(cli_path)}")
+        
+        print()
+        if not loc_cli_exists and not os.path.isfile(cli_path):
+            cli_path = self.__install_arduino_cli(
+                os.path.join(install_path)
+            )
+            
         base_args = [cli_path, flags.FORMAT, ArduinoCliCommand.__FORMAT_JSON]
         if config_file:
             base_args.extend([flags.CONFIG_FILE, CommandBase._strip_arg(config_file)])
@@ -230,3 +247,50 @@ class ArduinoCliCommand(CommandBase):
         :type: :class:`pyduinocli.commands.monitor.MonitorCommand`
         """
         return self.__monitor
+
+    # installing the arduino-cli
+    def __install_arduino_cli(self, path: str) -> str:
+        import subprocess
+        
+        # install the arduino-cli
+        # if windows, download the cli exe
+        if os.name == 'nt':
+            print("Downloading Windows arduino-cli...")
+            
+            try:
+                os.mkdir(path)
+            except FileExistsError:
+                print('folder exists!')
+            
+            url = "https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Windows_64bit.zip"
+            
+            r = requests.get(url)
+            with open(os.path.join(cli_path, "arduino-cli.zip"), "wb") as f:
+                f.write(r.content)
+
+            # extract the zip file
+            with ZipFile(os.path.join(cli_path, "arduino-cli.zip"), 'r') as zip_ref:
+                zip_ref.extractall(cli_path)
+            
+            # remove the zip file and license
+            os.remove(os.path.join(cli_path, "arduino-cli.zip"))
+            os.remove(os.path.join(cli_path, "LICENSE.txt"))
+            return os.path.join(path, 'arduino-cli.exe')
+            
+        elif os.name == 'posix':
+            print("Downloading Mac/Linux arduino-cli...")
+
+            try:
+                os.mkdir(path)
+            except FileExistsError:
+                print('Folder exists!')
+            
+            posixcmd = f'curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | BINDIR={path} sh'
+            
+            # run the command
+            
+            subprocess.run(posixcmd, shell=True, check=True)
+            return os.path.join(path, 'arduino-cli')
+        else:
+            raise SystemError("OS not supported.")
+        
