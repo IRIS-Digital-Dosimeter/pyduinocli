@@ -4,7 +4,8 @@ from pyduinocli.constants import flags
 import pkgutil
 import importlib
 import pyduinocli.commands as commands
-import os
+import os, requests
+from zipfile import ZipFile
 
 
 class ArduinoCliCommand(CommandBase):
