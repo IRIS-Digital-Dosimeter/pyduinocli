@@ -18,7 +18,7 @@ class UploadCommand(CommandBase):
         """
         Calls the :code:`upload` command
 
-        :param sketch: The sketch to upload, cap be the full path or just the name
+        :param sketch: The sketch to upload, can be the full path or just the name
         :type sketch: str or NoneType
         :param fqbn: The fully qualified board name of the target board
         :type fqbn: str or NoneType

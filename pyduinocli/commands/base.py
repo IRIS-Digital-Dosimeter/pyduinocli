@@ -1,5 +1,5 @@
 import json
-from subprocess import Popen, PIPE
+from subprocess import Popen, run, PIPE
 from pyduinocli.errors.arduinoerror import ArduinoError
 
 
@@ -29,14 +29,15 @@ class CommandBase:
     def _exec(self, args):
         command = list(self._base_args)
         command.extend(args)
-        p = Popen(command, stdout=PIPE, stderr=PIPE)
-        stdout, stderr = p.communicate()
-        stdout = stdout.decode("utf-8").strip()
-        stderr = stderr.decode("utf-8").strip()
+        # p = Popen(command, stdout=PIPE, stderr=PIPE)
+        # stdout, stderr = p.communicate()
+        # stdout = stdout.decode("utf-8").strip()
+        # stderr = stderr.decode("utf-8").strip()
+        p = run(command, text=True, capture_output=True)
         result = dict(
-            __stdout=stdout,
-            __stderr=stderr,
-            result=self.__parse_output(stdout)
+            __stdout=p.stdout,
+            __stderr=p.stderr,
+            result=self.__parse_output(p.stdout)
         )
         if p.returncode != 0:
             raise ArduinoError(result)

@@ -1,22 +1,9 @@
 from pyduinocli.commands.base import CommandBase
-from pyduinocli.commands.board import BoardCommand
-from pyduinocli.commands.cache import CacheCommand
-from pyduinocli.commands.compile import CompileCommand
-from pyduinocli.commands.config import ConfigCommand
-from pyduinocli.commands.core import CoreCommand
-from pyduinocli.commands.daemon import DaemonCommand
-from pyduinocli.commands.debug import DebugCommand
-from pyduinocli.commands.lib import LibCommand
-from pyduinocli.commands.monitor import MonitorCommand
-from pyduinocli.commands.sketch import SketchCommand
-from pyduinocli.commands.upload import UploadCommand
-from pyduinocli.commands.version import VersionCommand
-from pyduinocli.commands.burn_bootloader import BurnBootloaderCommand
-from pyduinocli.commands.completion import CompletionCommand
-from pyduinocli.commands.outdated import OutdatedCommand
-from pyduinocli.commands.update import UpdateCommand
-from pyduinocli.commands.upgrade import UpgradeCommand
 from pyduinocli.constants import flags
+
+import pkgutil
+import importlib
+import pyduinocli.commands as commands
 import os
 
 
@@ -48,20 +35,38 @@ class ArduinoCliCommand(CommandBase):
         :type no_color: bool or NoneType
         """
         
+        # automagically import all the command classes from `pyduinocli/commands/`
+        for loader, module_name, is_pkg in pkgutil.iter_modules(commands.__path__):
+            module = importlib.import_module(f"{commands.__name__}.{module_name}")
+            globals().update({
+                name: obj for name, obj in vars(module).items()
+                if name.endswith("Command")  # or any naming rule you want
+            })
         
         
         # if there is no CLI tool at `cli_path`, download the official tool
         library_dir = os.path.dirname(os.path.abspath(__file__))
         install_path = os.path.abspath(os.path.join(library_dir, '..', '..', 'arduino-cli'))
         loc_cli_exists = (os.path.isfile(os.path.join(install_path, 'arduino-cli.exe'))) or (os.path.isfile(os.path.join(install_path, 'arduino-cli')))
-        print(f"cli exists1: {loc_cli_exists}")
-        print(f"cli exists2: {os.path.isfile(cli_path)}")
+        given_cli_exists = os.path.isfile(cli_path)
+        # print(f"cli exists1: {loc_cli_exists}")
+        # print(f"cli exists2: {given_cli_exists}")
+        # print(f" install? {loc_cli_exists} {given_cli_exists}")
         
-        print()
-        if not loc_cli_exists and not os.path.isfile(cli_path):
-            cli_path = self.__install_arduino_cli(
-                os.path.join(install_path)
-            )
+        # if not loc_cli_exists and not given_cli_exists:
+        if given_cli_exists:
+            pass
+        elif loc_cli_exists:
+            if os.name == 'nt':
+                exec_name = 'arduino-cli.exe'
+            elif os.name == 'posix':
+                exec_name = 'arduino-cli'
+            else:
+                raise Exception("OS not supported :(")
+            cli_path = os.path.join(install_path, exec_name)
+        else:
+            cli_path = self.__install_arduino_cli(install_path)
+            
             
         base_args = [cli_path, flags.FORMAT, ArduinoCliCommand.__FORMAT_JSON]
         if config_file:
@@ -283,12 +288,12 @@ class ArduinoCliCommand(CommandBase):
             try:
                 os.mkdir(path)
             except FileExistsError:
-                print('Folder exists!')
+                # print('Folder exists!')
+                pass
             
             posixcmd = f'curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | BINDIR={path} sh'
             
-            # run the command
-            
+            # run the install script
             subprocess.run(posixcmd, shell=True, check=True)
             return os.path.join(path, 'arduino-cli')
         else:
