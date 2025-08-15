@@ -271,16 +271,16 @@ class ArduinoCliCommand(CommandBase):
             url = "https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Windows_64bit.zip"
             
             r = requests.get(url)
-            with open(os.path.join(cli_path, "arduino-cli.zip"), "wb") as f:
+            with open(os.path.join(path, "arduino-cli.zip"), "wb") as f:
                 f.write(r.content)
 
             # extract the zip file
-            with ZipFile(os.path.join(cli_path, "arduino-cli.zip"), 'r') as zip_ref:
-                zip_ref.extractall(cli_path)
+            with ZipFile(os.path.join(path, "arduino-cli.zip"), 'r') as zip_ref:
+                zip_ref.extractall(path)
             
             # remove the zip file and license
-            os.remove(os.path.join(cli_path, "arduino-cli.zip"))
-            os.remove(os.path.join(cli_path, "LICENSE.txt"))
+            os.remove(os.path.join(path, "arduino-cli.zip"))
+            os.remove(os.path.join(path, "LICENSE.txt"))
             return os.path.join(path, 'arduino-cli.exe')
             
         elif os.name == 'posix':
