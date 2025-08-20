@@ -1,5 +1,5 @@
 from pyduinocli.commands.base import CommandBase
-from pyduinocli.constants import flags
+from pyduinocli.constants import flags, paths
 
 import pkgutil
 import importlib
@@ -44,18 +44,23 @@ class ArduinoCliCommand(CommandBase):
                 if name.endswith("Command")  # or any naming rule you want
             })
         
+        # print(f"library path: {paths.LIB_DIR}")
+        # print(f"cli path: {cli_path}")
+        # print(f"defaault cli tool dir: {paths.DEFAULT_CLI_TOOL_DIR}")
+        # print(f"cli yaml path: {paths.CLI_YAML_PATH}")
+        # print(f"cli data path: {paths.CLI_DATA_PATH}")
+        # print(f"cli user path: {paths.CLI_USER_PATH}")
+        
+        # import time
+        # while(True):
+        #     time.sleep(1)
         
         # if there is no CLI tool at `cli_path`, download the official tool
-        library_dir = os.path.dirname(os.path.abspath(__file__))
-        install_path = os.path.abspath(os.path.join(library_dir, '..', '..', 'arduino-cli'))
-        loc_cli_exists = (os.path.isfile(os.path.join(install_path, 'arduino-cli.exe'))) or (os.path.isfile(os.path.join(install_path, 'arduino-cli')))
-        given_cli_exists = os.path.isfile(cli_path)
-        # print(f"cli exists1: {loc_cli_exists}")
-        # print(f"cli exists2: {given_cli_exists}")
-        # print(f" install? {loc_cli_exists} {given_cli_exists}")
         
-        # if not loc_cli_exists and not given_cli_exists:
-        if given_cli_exists:
+        loc_cli_exists = (os.path.isfile(os.path.join(paths.DEFAULT_CLI_TOOL_DIR, 'arduino-cli.exe'))) or (os.path.isfile(os.path.join(paths.DEFAULT_CLI_TOOL_DIR, 'arduino-cli')))
+        arg_cli_exists = os.path.isfile(cli_path)
+        
+        if arg_cli_exists:
             pass
         elif loc_cli_exists:
             if os.name == 'nt':
@@ -64,9 +69,12 @@ class ArduinoCliCommand(CommandBase):
                 exec_name = 'arduino-cli'
             else:
                 raise Exception("OS not supported :(")
-            cli_path = os.path.join(install_path, exec_name)
+            cli_path = os.path.join(paths.DEFAULT_CLI_TOOL_DIR.as_posix(), exec_name)
         else:
-            cli_path = self.__install_arduino_cli(install_path)
+            cli_path = self.__install_arduino_cli(paths.DEFAULT_CLI_TOOL_DIR.as_posix())
+            
+        if config_file is None:
+            config_file = paths.CLI_YAML_PATH.as_posix()
             
             
         base_args = [cli_path, flags.FORMAT, ArduinoCliCommand.__FORMAT_JSON]
@@ -83,6 +91,7 @@ class ArduinoCliCommand(CommandBase):
         if no_color is True:
             base_args.append(flags.NO_COLOR)
         CommandBase.__init__(self, base_args)
+        
         self.__board = BoardCommand(self._base_args)
         self.__cache = CacheCommand(self._base_args)
         self.__compile = CompileCommand(self._base_args)
@@ -100,6 +109,16 @@ class ArduinoCliCommand(CommandBase):
         self.__update = UpdateCommand(self._base_args)
         self.__upgrade = UpgradeCommand(self._base_args)
         self.__monitor = MonitorCommand(self._base_args)
+        
+        # if its None, use the config file in the ../../arduino-cli directory (same place as CLI tool) if
+        # it exists, otherwise create a one
+        if config_file is None:
+            if not os.path.isfile(config_file):
+                self.config.init(dest_file=config_file)
+            
+            
+        self.config.set('directories.data', [paths.CLI_DATA_PATH.as_posix()])
+        self.config.set('directories.user', [paths.CLI_USER_PATH.as_posix()])
 
     @property
     def board(self):
