@@ -1,3 +1,4 @@
 /arduino-cli
 /pyduinocli.egg-info
 __pycache__/
+/pyduinocli/arduino-cli/
